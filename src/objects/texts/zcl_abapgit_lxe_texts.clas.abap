@@ -90,6 +90,13 @@ CLASS zcl_abapgit_lxe_texts DEFINITION
       RAISING
         zcx_abapgit_exception .
 
+    METHODS serialize_as_properties
+      IMPORTING
+        !iv_object_type   TYPE tadir-object
+        !iv_object_name   TYPE tadir-obj_name
+      RAISING
+        zcx_abapgit_exception .
+
     " Implementation of deserialize_xml is not complete (but kept as future option)
     METHODS deserialize_xml
       IMPORTING
@@ -202,6 +209,7 @@ CLASS zcl_abapgit_lxe_texts IMPLEMENTATION.
   METHOD class_constructor.
 
     APPEND 'CLAS' TO gt_supported_obj_types.
+    APPEND 'INTF' TO gt_supported_obj_types.
     APPEND 'DOMA' TO gt_supported_obj_types.
     APPEND 'DTEL' TO gt_supported_obj_types.
     APPEND 'FUGR' TO gt_supported_obj_types.
@@ -660,6 +668,38 @@ CLASS zcl_abapgit_lxe_texts IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD serialize_as_properties.
+
+    DATA lt_lxe_texts TYPE ty_lxe_translations.
+    DATA lo_po_file TYPE REF TO zcl_abapgit_po_file.
+    DATA lv_lang LIKE LINE OF mo_i18n_params->ms_params-translation_languages.
+    FIELD-SYMBOLS <ls_translation> LIKE LINE OF lt_lxe_texts.
+
+    lt_lxe_texts = read_text_items(
+      iv_object_name   = iv_object_name
+      iv_object_type   = iv_object_type ).
+
+    LOOP AT mo_i18n_params->ms_params-translation_languages INTO lv_lang.
+      lv_lang = to_lower( lv_lang ).
+      data(lo_file_properties) = new zcl_abapgit_properties_file( lv_lang ).
+      mo_files->add_i18n_file( lo_file_properties ).
+*      CREATE OBJECT lo_po_file
+*        EXPORTING
+*          iv_lang = lv_lang.
+*      LOOP AT lt_lxe_texts ASSIGNING <ls_translation>.
+*        IF iso4_to_iso2( <ls_translation>-target_lang ) = lv_lang.
+*          lo_po_file->push_text_pairs(
+*            iv_objtype    = <ls_translation>-objtype
+*            iv_objname    = <ls_translation>-objname
+*            it_text_pairs = <ls_translation>-text_pairs ).
+*        ENDIF.
+*      ENDLOOP.
+*      mo_files->add_i18n_file( lo_po_file ).
+    ENDLOOP.
+
+  ENDMETHOD.
+
+
   METHOD serialize_xml.
 
     DATA lt_lxe_texts TYPE ty_lxe_translations.
@@ -762,7 +802,12 @@ CLASS zcl_abapgit_lxe_texts IMPLEMENTATION.
     " access to json can be easily added too,
     " or maybe (maybe) some kind of zif_ag_object_ctl with all DAO instead
 
-    IF 1 = 1.
+    if zcl_abapgit_feature=>is_enabled( zcl_abapgit_properties_file=>c_properties_feature ).
+
+      serialize_as_properties(
+        iv_object_type = iv_object_type
+        iv_object_name = iv_object_name ).
+    elseIF 1 = 1.
       serialize_as_po(
         iv_object_type = iv_object_type
         iv_object_name = iv_object_name ).

@@ -55,6 +55,36 @@ CLASS ltcl_object_types IMPLEMENTATION.
 
 ENDCLASS.
 
+
+CLASS lcl_settings_with_features DEFINITION.
+  PUBLIC SECTION.
+    INTERFACES zif_abapgit_persist_settings.
+    methods: constructor
+    importing features type string.
+  PRIVATE SECTION.
+    DATA mv_features TYPE string.
+ENDCLASS.
+
+CLASS lcl_settings_with_features IMPLEMENTATION.
+  METHOD zif_abapgit_persist_settings~modify.
+    RETURN.
+  ENDMETHOD.
+
+  METHOD zif_abapgit_persist_settings~read.
+
+    ro_settings = new zcl_abapgit_settings( ).
+    ro_settings->set_experimental_features( mv_features ).
+
+  ENDMETHOD.
+  METHOD constructor.
+    mv_features = features.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+
+
 *----------------------------------------------------------------------*
 *       CLASS ltcl_serialize DEFINITION
 *----------------------------------------------------------------------*
@@ -80,7 +110,9 @@ CLASS ltcl_serialize DEFINITION FOR TESTING RISK LEVEL HARMLESS DURATION SHORT F
       serialize_msag FOR TESTING RAISING zcx_abapgit_exception,
       serialize_prog FOR TESTING RAISING zcx_abapgit_exception,
       serialize_tran FOR TESTING RAISING zcx_abapgit_exception,
-      serialize_ttyp FOR TESTING RAISING zcx_abapgit_exception.
+      serialize_ttyp FOR TESTING RAISING zcx_abapgit_exception,
+      serialize_intf_aff for testing raising cx_static_check,
+      serialize_intf_aff_translate for testing raising cx_static_check.
 
 ENDCLASS.
 
@@ -159,6 +191,68 @@ CLASS ltcl_serialize IMPLEMENTATION.
     ls_item-obj_name = 'IF_BADI_TADIR_CHANGED'.
 
     check( ls_item ).
+
+  ENDMETHOD.
+
+  METHOD serialize_intf_aff.
+
+    DATA: exp  TYPE zif_abapgit_definitions=>ty_item.
+
+    exp-obj_type = 'INTF'.
+    exp-obj_name = 'IF_BADI_TADIR_CHANGED'.
+
+    data(settings) = new lcl_settings_with_features( zcl_abapgit_aff_registry=>c_aff_feature ).
+    zcl_abapgit_persist_injector=>set_settings( settings ).
+
+
+    data(act) = zcl_abapgit_objects=>serialize(
+      is_item        = exp
+      io_i18n_params = zcl_abapgit_i18n_params=>new( iv_main_language = zif_abapgit_definitions=>c_english ) ).
+
+    data(obj) = new cl_aff_obj( name = conv #( exp-obj_name )
+                                type = exp-obj_type
+                                package = value #( ) ).
+    data(mapper_abap) = cl_aff_file_name_mapper=>for_abap( ).
+    data(mapper_json) = cl_aff_file_name_mapper=>for_json( ).
+    data(file_name_abap) = mapper_abap->get_file_name_from_object( obj ).
+    data(file_name_json) = mapper_json->get_file_name_from_object( obj ).
+
+    data(json_file) = value #( act-files[ filename = file_name_json ]  optional ).
+    cl_abap_unit_assert=>assert_not_initial( json_file ).
+    data(abap_file) = value #( act-files[ filename = file_name_abap ]  optional ).
+    cl_abap_unit_assert=>assert_not_initial( abap_file ).
+    cl_abap_unit_assert=>assert_equals( act = act-item
+                                        exp = exp ).
+
+
+  ENDMETHOD.
+
+
+  METHOD serialize_intf_aff_translate.
+
+    DATA: exp  TYPE zif_abapgit_definitions=>ty_item.
+
+    exp-obj_type = 'INTF'.
+    exp-obj_name = 'IF_BADI_TADIR_CHANGED'.
+
+    data(settings) = new lcl_settings_with_features( |{ zcl_abapgit_aff_registry=>c_aff_feature }, { zcl_abapgit_properties_file=>c_properties_feature }|  ).
+    zcl_abapgit_persist_injector=>set_settings( settings ).
+
+
+    data(act) = zcl_abapgit_objects=>serialize(
+      is_item        = exp
+      io_i18n_params = zcl_abapgit_i18n_params=>new( iv_main_language = zif_abapgit_definitions=>c_english
+                                                     it_translation_langs = value #( ( 'DE' )  )
+                                                     iv_use_lxe = abap_true )  ).
+
+    cl_abap_unit_assert=>assert_not_initial( act-files ).
+    cl_abap_unit_assert=>assert_equals( act = act-item
+                                        exp = exp ).
+
+
+    data(translation_de) = value #( act-files[ filename = 'if_badi_tadir_changed.intf.i18n.de.properties' ]  optional ).
+    cl_abap_unit_assert=>assert_not_initial( translation_de ).
+
 
   ENDMETHOD.
 
