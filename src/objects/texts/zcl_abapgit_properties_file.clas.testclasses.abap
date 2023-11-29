@@ -16,7 +16,7 @@ class ltcl_properties_file implementation.
   method write_properties.
     data lt_lxe_pairs_act type zif_abapgit_lxe_texts=>ty_text_pairs.
 
-    lt_lxe_pairs_act = value #( ( textkey = 'header.description'
+    lt_lxe_pairs_act = value #( ( textkey = 'technical.key'
                                   s_text  = 'day'
                                   t_text  = 'dia' ) ).
 
