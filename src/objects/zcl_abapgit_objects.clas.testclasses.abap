@@ -242,12 +242,16 @@ CLASS ltcl_serialize IMPLEMENTATION.
     data(act) = zcl_abapgit_objects=>serialize(
       is_item        = exp
       io_i18n_params = zcl_abapgit_i18n_params=>new( iv_main_language = zif_abapgit_definitions=>c_english
-                                                     it_translation_langs = value #( ( 'DE' ) ( 'FR' ) )
+                                                     it_translation_langs = value #( ( 'DE' )  )
                                                      iv_use_lxe = abap_true )  ).
 
     cl_abap_unit_assert=>assert_not_initial( act-files ).
     cl_abap_unit_assert=>assert_equals( act = act-item
                                         exp = exp ).
+
+
+    data(translation_de) = value #( act-files[ filename = 'if_badi_tadir_changed.intf.i18n.de.properties' ]  optional ).
+    cl_abap_unit_assert=>assert_not_initial( translation_de ).
 
 
   ENDMETHOD.
