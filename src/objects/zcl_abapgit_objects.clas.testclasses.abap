@@ -55,6 +55,26 @@ CLASS ltcl_object_types IMPLEMENTATION.
 
 ENDCLASS.
 
+
+CLASS lcl_settings_with_aff DEFINITION.
+  PUBLIC SECTION.
+    INTERFACES zif_abapgit_persist_settings.
+ENDCLASS.
+
+CLASS lcl_settings_with_aff IMPLEMENTATION.
+  METHOD zif_abapgit_persist_settings~modify.
+    RETURN.
+  ENDMETHOD.
+
+  METHOD zif_abapgit_persist_settings~read.
+
+    ro_settings = new zcl_abapgit_settings( ).
+    ro_settings->set_experimental_features( zcl_abapgit_aff_registry=>c_aff_feature ).
+
+  ENDMETHOD.
+ENDCLASS.
+
+
 *----------------------------------------------------------------------*
 *       CLASS ltcl_serialize DEFINITION
 *----------------------------------------------------------------------*
@@ -80,7 +100,8 @@ CLASS ltcl_serialize DEFINITION FOR TESTING RISK LEVEL HARMLESS DURATION SHORT F
       serialize_msag FOR TESTING RAISING zcx_abapgit_exception,
       serialize_prog FOR TESTING RAISING zcx_abapgit_exception,
       serialize_tran FOR TESTING RAISING zcx_abapgit_exception,
-      serialize_ttyp FOR TESTING RAISING zcx_abapgit_exception.
+      serialize_ttyp FOR TESTING RAISING zcx_abapgit_exception,
+    serialize_intf_aff for testing raising cx_static_check.
 
 ENDCLASS.
 
@@ -159,6 +180,29 @@ CLASS ltcl_serialize IMPLEMENTATION.
     ls_item-obj_name = 'IF_BADI_TADIR_CHANGED'.
 
     check( ls_item ).
+
+  ENDMETHOD.
+
+  METHOD serialize_intf_aff.
+
+    DATA: exp  TYPE zif_abapgit_definitions=>ty_item.
+
+    exp-obj_type = 'INTF'.
+    exp-obj_name = 'IF_BADI_TADIR_CHANGED'.
+
+    data(settings) = new lcl_settings_with_aff( ).
+    zcl_abapgit_persist_injector=>set_settings( settings ).
+
+
+    data(act) = zcl_abapgit_objects=>serialize(
+      is_item        = exp
+      io_i18n_params = zcl_abapgit_i18n_params=>new( iv_main_language = zif_abapgit_definitions=>c_english ) ).
+
+    data(json_file) = value #( act-files[ filename = `if_badi_tadir_changed.intf.json` ]  optional ).
+    cl_abap_unit_assert=>assert_not_initial( json_file ).
+    cl_abap_unit_assert=>assert_equals( act = act-item
+                                        exp = exp ).
+
 
   ENDMETHOD.
 
