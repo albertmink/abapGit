@@ -29,7 +29,7 @@ class ltcl_properties_file implementation.
     data(lv_act) = lo_cut->build_po_body( )->join_w_newline_and_flush( ).
 
     data(lo_buf) = new zcl_abapgit_string_buffer( ).
-    lo_buf->add( 'header.description=dia' ).
+    lo_buf->add( 'technical.key=dia' ).
 
     data(lv_exp) = lo_buf->join_w_newline_and_flush( ).
 

@@ -6,6 +6,9 @@ class zcl_abapgit_properties_file definition
   public section.
     interfaces zif_abapgit_i18n_file.
 
+    constants:
+      c_properties_feature type string value 'TRANSL'.
+
     methods constructor
       importing iv_lang type laiso.
 
@@ -108,10 +111,12 @@ class zcl_abapgit_properties_file implementation.
 
 
   method zif_abapgit_i18n_file~ext.
+    rv_ext = 'properties'.
   endmethod.
 
 
   method zif_abapgit_i18n_file~lang.
+    rv_lang = mv_lang.
   endmethod.
 
 
