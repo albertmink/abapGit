@@ -56,12 +56,17 @@ CLASS ltcl_object_types IMPLEMENTATION.
 ENDCLASS.
 
 
-CLASS lcl_settings_with_aff DEFINITION.
+CLASS lcl_settings_with_features DEFINITION.
   PUBLIC SECTION.
     INTERFACES zif_abapgit_persist_settings.
+    methods: constructor
+    importing features type string.
+  PRIVATE SECTION.
+    DATA mv_features TYPE string.
 ENDCLASS.
 
-CLASS lcl_settings_with_aff IMPLEMENTATION.
+CLASS lcl_settings_with_features IMPLEMENTATION.
+
   METHOD zif_abapgit_persist_settings~modify.
     RETURN.
   ENDMETHOD.
@@ -69,9 +74,14 @@ CLASS lcl_settings_with_aff IMPLEMENTATION.
   METHOD zif_abapgit_persist_settings~read.
 
     ro_settings = new zcl_abapgit_settings( ).
-    ro_settings->set_experimental_features( zcl_abapgit_aff_registry=>c_aff_feature ).
+    ro_settings->set_experimental_features( mv_features ).
 
   ENDMETHOD.
+
+  METHOD constructor.
+    mv_features = features.
+  ENDMETHOD.
+
 ENDCLASS.
 
 
@@ -190,7 +200,7 @@ CLASS ltcl_serialize IMPLEMENTATION.
     exp-obj_type = 'INTF'.
     exp-obj_name = 'IF_BADI_TADIR_CHANGED'.
 
-    data(settings) = new lcl_settings_with_aff( ).
+    data(settings) = new lcl_settings_with_features( zcl_abapgit_aff_registry=>c_aff_feature ).
     zcl_abapgit_persist_injector=>set_settings( settings ).
 
 
@@ -205,7 +215,6 @@ CLASS ltcl_serialize IMPLEMENTATION.
     data(mapper_json) = cl_aff_file_name_mapper=>for_json( ).
     data(file_name_abap) = mapper_abap->get_file_name_from_object( obj ).
     data(file_name_json) = mapper_json->get_file_name_from_object( obj ).
-*    data(file_name_json) = `if_badi_tadir_changed.intf.json`.
 
     data(json_file) = value #( act-files[ filename = file_name_json ]  optional ).
     cl_abap_unit_assert=>assert_not_initial( json_file ).
