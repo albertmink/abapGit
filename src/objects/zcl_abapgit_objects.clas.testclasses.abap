@@ -198,8 +198,19 @@ CLASS ltcl_serialize IMPLEMENTATION.
       is_item        = exp
       io_i18n_params = zcl_abapgit_i18n_params=>new( iv_main_language = zif_abapgit_definitions=>c_english ) ).
 
-    data(json_file) = value #( act-files[ filename = `if_badi_tadir_changed.intf.json` ]  optional ).
+    data(obj) = new cl_aff_obj( name = conv #( exp-obj_name )
+                                type = exp-obj_type
+                                package = value #( ) ).
+    data(mapper_abap) = cl_aff_file_name_mapper=>for_abap( ).
+    data(mapper_json) = cl_aff_file_name_mapper=>for_json( ).
+    data(file_name_abap) = mapper_abap->get_file_name_from_object( obj ).
+    data(file_name_json) = mapper_json->get_file_name_from_object( obj ).
+*    data(file_name_json) = `if_badi_tadir_changed.intf.json`.
+
+    data(json_file) = value #( act-files[ filename = file_name_json ]  optional ).
     cl_abap_unit_assert=>assert_not_initial( json_file ).
+    data(abap_file) = value #( act-files[ filename = file_name_abap ]  optional ).
+    cl_abap_unit_assert=>assert_not_initial( abap_file ).
     cl_abap_unit_assert=>assert_equals( act = act-item
                                         exp = exp ).
 
