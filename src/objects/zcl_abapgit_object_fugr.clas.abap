@@ -227,7 +227,7 @@ CLASS zcl_abapgit_object_fugr IMPLEMENTATION.
 
     LOOP AT it_functions ASSIGNING <ls_func>.
 
-      lt_source = zif_abapgit_object~mo_files->read_abap( iv_extra = <ls_func>-funcname ).
+      lt_source = mo_files->read_abap( iv_extra = <ls_func>-funcname ).
 
       lv_area = ms_item-obj_name.
 
@@ -383,9 +383,9 @@ CLASS zcl_abapgit_object_fugr IMPLEMENTATION.
       ENDIF.
 
       TRY.
-          lt_source = zif_abapgit_object~mo_files->read_abap( iv_extra = <lv_include> ).
+          lt_source = mo_files->read_abap( iv_extra = <lv_include> ).
 
-          lo_xml = zif_abapgit_object~mo_files->read_xml( <lv_include> ).
+          lo_xml = mo_files->read_xml( <lv_include> ).
 
           lo_xml->read( EXPORTING iv_name = 'PROGDIR'
                         CHANGING cg_data = ls_progdir ).
@@ -554,7 +554,7 @@ CLASS zcl_abapgit_object_fugr IMPLEMENTATION.
 
     LOOP AT lt_includes ASSIGNING <lv_include>.
 
-      lo_xml = zif_abapgit_object~mo_files->read_xml( <lv_include> ).
+      lo_xml = mo_files->read_xml( <lv_include> ).
 
       lo_xml->read( EXPORTING iv_name = 'PROGDIR'
                     CHANGING cg_data = ls_progdir ).
@@ -766,7 +766,7 @@ CLASS zcl_abapgit_object_fugr IMPLEMENTATION.
     " like in LSEAPFAP Form TADIR_MAINTENANCE
     DATA ls_tadir TYPE tadir.
     DATA lv_namespace TYPE rs38l-namespace.
-    DATA lv_area TYPE rs38l-area.
+    DATA lv_function_group TYPE rs38l-area.
     DATA lv_include TYPE rs38l-include.
 
     rv_belongs_to_other_fugr = abap_false.
@@ -777,17 +777,18 @@ CLASS zcl_abapgit_object_fugr IMPLEMENTATION.
       CALL FUNCTION 'FUNCTION_INCLUDE_SPLIT'
         IMPORTING
           namespace = lv_namespace
-          group     = lv_area
+          group     = lv_function_group
         CHANGING
           include   = lv_include
         EXCEPTIONS
           OTHERS    = 1.
-      IF lv_area(1) = 'X'.    " "EXIT"-function-module
+      IF lv_function_group(1) = 'X'.    " "EXIT"-function-module
         ls_tadir-object = 'FUGS'.
       ENDIF.
       IF sy-subrc = 0.
-        CONCATENATE lv_namespace lv_area INTO ls_tadir-obj_name.
-        IF ls_tadir-obj_name <> ms_item-obj_name.
+        CONCATENATE lv_namespace lv_function_group INTO ls_tadir-obj_name.
+        " compare complete tadir key to distinguish between regular and exit function groups
+        IF ls_tadir-obj_name <> ms_item-obj_name OR ls_tadir-object <> ms_item-obj_type.
           rv_belongs_to_other_fugr = abap_true.
         ENDIF.
       ENDIF.
@@ -895,12 +896,12 @@ CLASS zcl_abapgit_object_fugr IMPLEMENTATION.
 
       IF NOT lt_new_source IS INITIAL.
         strip_generation_comments( CHANGING ct_source = lt_new_source ).
-        zif_abapgit_object~mo_files->add_abap(
+        mo_files->add_abap(
           iv_extra = <ls_func>-funcname
           it_abap  = lt_new_source ).
       ELSE.
         strip_generation_comments( CHANGING ct_source = lt_source ).
-        zif_abapgit_object~mo_files->add_abap(
+        mo_files->add_abap(
           iv_extra = <ls_func>-funcname
           it_abap  = lt_source ).
       ENDIF.
@@ -951,7 +952,7 @@ CLASS zcl_abapgit_object_fugr IMPLEMENTATION.
 
 * todo, filename is not correct, a include can be used in several programs
       serialize_program( is_item    = ms_item
-                         io_files   = zif_abapgit_object~mo_files
+                         io_files   = mo_files
                          iv_program = <lv_include>
                          iv_extra   = <lv_include> ).
 
