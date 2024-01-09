@@ -121,6 +121,8 @@ class zcl_abapgit_properties_file implementation.
 
 
   method zif_abapgit_i18n_file~render.
+    " simply be not empty
+    rv_data = cl_abap_codepage=>convert_to( `$.header.description=Interface zum BAdI: BADI_TADIR_CHANGED` ).
   endmethod.
 
 

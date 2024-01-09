@@ -254,6 +254,30 @@ CLASS ltcl_serialize IMPLEMENTATION.
     cl_abap_unit_assert=>assert_not_initial( translation_de ).
 
 
+    DATA(file_table) = VALUE string_table(
+( `$.header.description=Interface zum BAdI: BADI_TADIR_CHANGED` )
+( `$.descriptions.methods[0].description=Objektkatalog geändert (insert,change,delete)` )
+( `$.descriptions.methods[1].description=Objektkatalog wird geändert (insert,change,delete)` )
+( `$.descriptions.methods[0].parameters[0].description=Objektname im Objektkatalog` )
+( `$.descriptions.methods[0].parameters[1].description=Objekttyp` )
+( `$.descriptions.methods[1].parameters[0].description=` )
+( `$.descriptions.methods[1].parameters[1].description=Objektname im Objektkatalog` )
+( `$.descriptions.methods[1].parameters[1].description=Objekttyp` )
+) .
+    DATA(file_string) = concat_lines_of( table = file_table sep = cl_abap_char_utilities=>newline ).
+
+    DATA act_string_table TYPE string_table.
+    DATA(act_string) = cl_abap_codepage=>convert_from( source = translation_de-data ).
+
+    DATA(act_string_eof) = act_string && cl_abap_char_utilities=>newline.
+    SPLIT act_string_eof AT cl_abap_char_utilities=>newline INTO TABLE act_string_table.
+
+    data(diff) = cl_abap_diff=>create( )->diff(
+      target = act_string_table
+      source = file_table ).
+
+    cl_abap_unit_assert=>assert_initial( diff ).
+
   ENDMETHOD.
 
   METHOD serialize_doma.
