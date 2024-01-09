@@ -57,6 +57,12 @@ CLASS zcl_abapgit_services_repo DEFINITION
         !io_repo TYPE REF TO zcl_abapgit_repo
       RAISING
         zcx_abapgit_exception .
+    CLASS-METHODS real_deserialize
+      IMPORTING
+        !io_repo   TYPE REF TO zcl_abapgit_repo
+        !is_checks TYPE zif_abapgit_definitions=>ty_deserialize_checks
+      RAISING
+        zcx_abapgit_exception .
     CLASS-METHODS activate_objects
       IMPORTING
         !iv_key       TYPE zif_abapgit_persistence=>ty_repo-key
@@ -321,10 +327,7 @@ CLASS zcl_abapgit_services_repo IMPLEMENTATION.
 
   METHOD gui_deserialize.
 
-    DATA:
-      lv_msg    TYPE string,
-      ls_checks TYPE zif_abapgit_definitions=>ty_deserialize_checks,
-      li_log    TYPE REF TO zif_abapgit_log.
+    DATA ls_checks TYPE zif_abapgit_definitions=>ty_deserialize_checks.
 
     " find troublesome objects
     ls_checks = io_repo->deserialize_checks( ).
@@ -346,25 +349,9 @@ CLASS zcl_abapgit_services_repo IMPLEMENTATION.
         RETURN.
     ENDTRY.
 
-    li_log = io_repo->create_new_log( 'Pull Log' ).
-
-    " pass decisions to delete
-    delete_unnecessary_objects(
+    real_deserialize(
       io_repo   = io_repo
-      is_checks = ls_checks
-      ii_log    = li_log ).
-
-    " pass decisions to deserialize
-    io_repo->deserialize(
-      is_checks = ls_checks
-      ii_log    = li_log ).
-
-    IF li_log->get_status( ) = zif_abapgit_log=>c_status-ok.
-      lv_msg = |Repository { io_repo->get_name( ) } successfully pulled for package { io_repo->get_package( ) }|.
-      MESSAGE lv_msg TYPE 'S'.
-    ENDIF.
-
-    check_for_restart( io_repo ).
+      is_checks = ls_checks ).
 
   ENDMETHOD.
 
@@ -477,7 +464,7 @@ CLASS zcl_abapgit_services_repo IMPLEMENTATION.
     " Ask user what to do
     IF cs_checks-requirements-met = zif_abapgit_definitions=>c_no.
       lt_requirements = io_repo->get_dot_abapgit( )->get_data( )-requirements.
-      zcl_abapgit_requirement_helper=>requirements_popup( lt_requirements ).
+      zcl_abapgit_repo_requirements=>requirements_popup( lt_requirements ).
       cs_checks-requirements-decision = zif_abapgit_definitions=>c_yes.
     ENDIF.
 
@@ -714,6 +701,34 @@ CLASS zcl_abapgit_services_repo IMPLEMENTATION.
     IF zcl_abapgit_factory=>get_sap_package( iv_devclass )->exists( ) = abap_true.
       zcx_abapgit_exception=>raise( |Package { iv_devclass } already exists| ).
     ENDIF.
+
+  ENDMETHOD.
+
+
+  METHOD real_deserialize.
+
+    DATA li_log TYPE REF TO zif_abapgit_log.
+    DATA lv_msg TYPE string.
+
+    li_log = io_repo->create_new_log( 'Pull Log' ).
+
+    " pass decisions to delete
+    delete_unnecessary_objects(
+      io_repo   = io_repo
+      is_checks = is_checks
+      ii_log    = li_log ).
+
+    " pass decisions to deserialize
+    io_repo->deserialize(
+      is_checks = is_checks
+      ii_log    = li_log ).
+
+    IF li_log->get_status( ) = zif_abapgit_log=>c_status-ok.
+      lv_msg = |Repository { io_repo->get_name( ) } successfully pulled for package { io_repo->get_package( ) }|.
+      MESSAGE lv_msg TYPE 'S'.
+    ENDIF.
+
+    check_for_restart( io_repo ).
 
   ENDMETHOD.
 

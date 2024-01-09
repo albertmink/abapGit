@@ -1,7 +1,7 @@
 CLASS zcl_abapgit_oo_base DEFINITION
   PUBLIC
   ABSTRACT
-  CREATE PUBLIC .
+  CREATE PROTECTED.
 
   PUBLIC SECTION.
 
@@ -13,7 +13,7 @@ CLASS zcl_abapgit_oo_base DEFINITION
     CLASS-METHODS:
       convert_attrib_to_vseoattrib
         IMPORTING iv_clsname           TYPE seoclsname
-                  it_attributes        TYPE zif_abapgit_definitions=>ty_obj_attribute_tt
+                  it_attributes        TYPE zif_abapgit_oo_object_fnc=>ty_obj_attribute_tt
         RETURNING VALUE(rt_vseoattrib) TYPE seoo_attributes_r.
 
   PRIVATE SECTION.
@@ -355,4 +355,10 @@ CLASS zcl_abapgit_oo_base IMPLEMENTATION.
     DELETE FROM seosubcotx WHERE clsname = is_key-clsname."#EC CI_SUBRC
     INSERT seosubcotx FROM TABLE lt_descriptions.         "#EC CI_SUBRC
   ENDMETHOD.
+
+
+  METHOD zif_abapgit_oo_object_fnc~syntax_check.
+    ASSERT 0 = 1. "Subclass responsibility
+  ENDMETHOD.
+
 ENDCLASS.

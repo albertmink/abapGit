@@ -42,6 +42,7 @@ CLASS zcl_abapgit_gui_page_sett_repo DEFINITION
         version_constant TYPE string VALUE 'version_constant',
         version_value    TYPE string VALUE 'version_value',
         abap_langu_vers  TYPE string VALUE 'abap_langu_vers',
+        original_system  TYPE string VALUE 'original_system',
       END OF c_id.
     CONSTANTS:
       BEGIN OF c_event,
@@ -61,6 +62,11 @@ CLASS zcl_abapgit_gui_page_sett_repo DEFINITION
         !io_form_data            TYPE REF TO zcl_abapgit_string_map
       RETURNING
         VALUE(ro_validation_log) TYPE REF TO zcl_abapgit_string_map
+      RAISING
+        zcx_abapgit_exception .
+    METHODS validate_version_constant
+      IMPORTING
+        !iv_version_constant TYPE string
       RAISING
         zcx_abapgit_exception .
     METHODS get_form_schema
@@ -132,7 +138,8 @@ CLASS zcl_abapgit_gui_page_sett_repo IMPLEMENTATION.
     )->text(
       iv_name        = c_id-version_constant
       iv_label       = 'Version Constant'
-      iv_placeholder = 'ZVERSION_CLASS=>VERSION_CONSTANT'
+      iv_placeholder = 'CLASS=>VERSION_CONSTANT or INTERFACE=>VERSION_CONSTANT'
+      iv_upper_case  = abap_true
     )->text(
       iv_name        = c_id-version_value
       iv_label       = 'Version Value'
@@ -193,7 +200,13 @@ CLASS zcl_abapgit_gui_page_sett_repo IMPLEMENTATION.
       iv_width       = '30%'
     )->column(
       iv_label       = 'Minimum Patch'
-      iv_width       = '30%' ).
+      iv_width       = '30%'
+    )->text(
+      iv_name        = c_id-original_system
+      iv_label       = 'Original System'
+      iv_upper_case  = abap_true
+      iv_max         = 3
+      iv_hint        = 'Sets the source system of objects during deserialize in downstream systems' ).
 
     IF zcl_abapgit_feature=>is_enabled( zcl_abapgit_abap_language_vers=>c_feature_flag ) = abap_true.
       ro_form->radio(
@@ -332,6 +345,10 @@ CLASS zcl_abapgit_gui_page_sett_repo IMPLEMENTATION.
         iv_val = ls_dot-abap_language_version ).
     ENDIF.
 
+    ro_form_data->set(
+      iv_key = c_id-original_system
+      iv_val = ls_dot-original_system ).
+
   ENDMETHOD.
 
 
@@ -350,6 +367,7 @@ CLASS zcl_abapgit_gui_page_sett_repo IMPLEMENTATION.
     lo_dot->set_folder_logic( mo_form_data->get( c_id-folder_logic ) ).
     lo_dot->set_starting_folder( mo_form_data->get( c_id-starting_folder ) ).
     lo_dot->set_version_constant( mo_form_data->get( c_id-version_constant ) ).
+    lo_dot->set_original_system( mo_form_data->get( c_id-original_system ) ).
 
     IF zcl_abapgit_feature=>is_enabled( zcl_abapgit_abap_language_vers=>c_feature_flag ) = abap_true.
       lo_dot->set_abap_language_version( mo_form_data->get( c_id-abap_langu_vers ) ).
@@ -406,6 +424,8 @@ CLASS zcl_abapgit_gui_page_sett_repo IMPLEMENTATION.
 
   METHOD validate_form.
 
+    CONSTANTS lc_allowed(36) TYPE c VALUE 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'.
+
     DATA:
       lt_lang_list        TYPE zif_abapgit_definitions=>ty_languages,
       lv_folder           TYPE string,
@@ -414,6 +434,7 @@ CLASS zcl_abapgit_gui_page_sett_repo IMPLEMENTATION.
       lv_min_release      TYPE zif_abapgit_dot_abapgit=>ty_requirement-min_release,
       lv_min_patch        TYPE zif_abapgit_dot_abapgit=>ty_requirement-min_patch,
       lv_version_constant TYPE string,
+      lv_original_system  TYPE string,
       lx_exception        TYPE REF TO zcx_abapgit_exception.
 
     ro_validation_log = zcl_abapgit_html_form_utils=>create( mo_form )->validate( io_form_data ).
@@ -455,6 +476,7 @@ CLASS zcl_abapgit_gui_page_sett_repo IMPLEMENTATION.
         IF lv_version_constant IS NOT INITIAL.
           zcl_abapgit_version=>get_version_constant_value( lv_version_constant ).
         ENDIF.
+        validate_version_constant( lv_version_constant ).
       CATCH zcx_abapgit_exception INTO lx_exception.
         ro_validation_log->set(
           iv_key = c_id-version_constant
@@ -468,6 +490,36 @@ CLASS zcl_abapgit_gui_page_sett_repo IMPLEMENTATION.
       ro_validation_log->set(
         iv_key = c_id-i18n_langs
         iv_val = 'LXE approach requires a non-empty list of languages' ).
+    ENDIF.
+
+    lv_original_system = io_form_data->get( c_id-original_system ).
+    IF lv_original_system CN lc_allowed.
+      ro_validation_log->set(
+        iv_key = c_id-original_system
+        iv_val = 'System name must be alphanumerical' ).
+    ENDIF.
+
+  ENDMETHOD.
+
+
+  METHOD validate_version_constant.
+
+    DATA: lv_version_class     TYPE seoclsname,
+          lv_version_component TYPE string,
+          lt_local             TYPE zif_abapgit_definitions=>ty_files_item_tt.
+
+    SPLIT iv_version_constant AT '=>' INTO lv_version_class lv_version_component.
+
+    lt_local = mo_repo->get_files_local( ).
+
+    READ TABLE lt_local TRANSPORTING NO FIELDS WITH KEY
+      item-obj_type = 'CLAS' item-obj_name = lv_version_class.
+    IF sy-subrc <> 0.
+      READ TABLE lt_local TRANSPORTING NO FIELDS WITH KEY
+        item-obj_type = 'INTF' item-obj_name = lv_version_class.
+      IF sy-subrc <> 0.
+        zcx_abapgit_exception=>raise( |Object { lv_version_class } is not included in this repository| ).
+      ENDIF.
     ENDIF.
 
   ENDMETHOD.
