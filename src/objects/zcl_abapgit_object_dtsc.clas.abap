@@ -1,7 +1,12 @@
-CLASS zcl_abapgit_object_dtdc DEFINITION PUBLIC INHERITING FROM zcl_abapgit_objects_super FINAL.
+CLASS zcl_abapgit_object_dtsc DEFINITION
+  PUBLIC
+  INHERITING FROM zcl_abapgit_objects_super
+  FINAL
+  CREATE PUBLIC .
 
   PUBLIC SECTION.
-    INTERFACES zif_abapgit_object.
+
+    INTERFACES zif_abapgit_object .
 
     METHODS constructor
       IMPORTING
@@ -10,24 +15,23 @@ CLASS zcl_abapgit_object_dtdc DEFINITION PUBLIC INHERITING FROM zcl_abapgit_obje
         !io_files       TYPE REF TO zcl_abapgit_objects_files OPTIONAL
         !io_i18n_params TYPE REF TO zcl_abapgit_i18n_params OPTIONAL
       RAISING
-        zcx_abapgit_type_not_supported.
-
+        zcx_abapgit_type_not_supported .
   PROTECTED SECTION.
   PRIVATE SECTION.
     METHODS:
       clear_fields
         CHANGING
-          cs_dynamic_cache TYPE any,
+          cs_static_cache TYPE any,
 
       clear_field
         IMPORTING
-          iv_fieldname     TYPE csequence
+          iv_fieldname    TYPE csequence
         CHANGING
-          cs_dynamic_cache TYPE any,
+          cs_static_cache TYPE any,
 
       fill_metadata_from_db
         CHANGING
-          cs_dynamic_cache TYPE any
+          cs_static_cache TYPE any
         RAISING
           zcx_abapgit_exception,
 
@@ -42,8 +46,8 @@ CLASS zcl_abapgit_object_dtdc DEFINITION PUBLIC INHERITING FROM zcl_abapgit_obje
           VALUE(rv_supported) TYPE abap_bool.
 
     DATA:
-      mr_dynamic_cache         TYPE REF TO data,
-      mv_dynamic_cache_key     TYPE seu_objkey,
+      mr_static_cache          TYPE REF TO data,
+      mv_static_cache_key      TYPE seu_objkey,
       mv_has_own_wb_data_class TYPE abap_bool,
       mi_persistence           TYPE REF TO if_wb_object_persist,
       mi_wb_object_operator    TYPE REF TO object.
@@ -51,14 +55,14 @@ ENDCLASS.
 
 
 
-CLASS zcl_abapgit_object_dtdc IMPLEMENTATION.
+CLASS ZCL_ABAPGIT_OBJECT_DTSC IMPLEMENTATION.
 
 
   METHOD clear_field.
 
     FIELD-SYMBOLS: <lv_value> TYPE data.
 
-    ASSIGN COMPONENT iv_fieldname OF STRUCTURE cs_dynamic_cache
+    ASSIGN COMPONENT iv_fieldname OF STRUCTURE cs_static_cache
            TO <lv_value>.
     IF sy-subrc = 0.
       CLEAR: <lv_value>.
@@ -73,66 +77,66 @@ CLASS zcl_abapgit_object_dtdc IMPLEMENTATION.
       EXPORTING
         iv_fieldname     = 'METADATA-CREATED_AT'
       CHANGING
-        cs_dynamic_cache = cs_dynamic_cache ).
+        cs_static_cache = cs_static_cache ).
 
     clear_field(
       EXPORTING
         iv_fieldname     = 'METADATA-CREATED_BY'
       CHANGING
-        cs_dynamic_cache = cs_dynamic_cache ).
+        cs_static_cache = cs_static_cache ).
 
     clear_field(
       EXPORTING
         iv_fieldname     = 'METADATA-CHANGED_AT'
       CHANGING
-        cs_dynamic_cache = cs_dynamic_cache ).
+        cs_static_cache = cs_static_cache ).
 
     clear_field(
       EXPORTING
         iv_fieldname     = 'METADATA-CHANGED_BY'
       CHANGING
-        cs_dynamic_cache = cs_dynamic_cache ).
+        cs_static_cache = cs_static_cache ).
 
     clear_field(
       EXPORTING
         iv_fieldname     = 'METADATA-MASTER_LANGUAGE'
       CHANGING
-        cs_dynamic_cache = cs_dynamic_cache ).
+        cs_static_cache = cs_static_cache ).
 
     clear_field(
       EXPORTING
         iv_fieldname     = 'METADATA-MASTER_SYSTEM'
       CHANGING
-        cs_dynamic_cache = cs_dynamic_cache ).
+        cs_static_cache = cs_static_cache ).
 
     clear_field(
       EXPORTING
         iv_fieldname     = 'METADATA-RESPONSIBLE'
       CHANGING
-        cs_dynamic_cache = cs_dynamic_cache ).
+        cs_static_cache = cs_static_cache ).
 
     clear_field(
       EXPORTING
         iv_fieldname     = 'METADATA-PACKAGE_REF'
       CHANGING
-        cs_dynamic_cache = cs_dynamic_cache ).
+        cs_static_cache = cs_static_cache ).
 
     clear_field(
       EXPORTING
         iv_fieldname     = 'METADATA-ABAP_LANGUAGE_VERSION'
       CHANGING
-        cs_dynamic_cache = cs_dynamic_cache ).
+        cs_static_cache = cs_static_cache ).
     clear_field(
       EXPORTING
         iv_fieldname     = 'METADATA-ABAP_LANGU_VERSION'
       CHANGING
-        cs_dynamic_cache = cs_dynamic_cache ).
+        cs_static_cache = cs_static_cache ).
 
     clear_field(
       EXPORTING
         iv_fieldname     = 'CONTENT-SOURCE'
       CHANGING
-        cs_dynamic_cache = cs_dynamic_cache ).
+        cs_static_cache = cs_static_cache ).
 
   ENDMETHOD.
 
@@ -145,16 +149,14 @@ CLASS zcl_abapgit_object_dtdc IMPLEMENTATION.
       io_files       = io_files
       io_i18n_params = io_i18n_params ).
 
-    mv_dynamic_cache_key = ms_item-obj_name.
+    mv_static_cache_key = ms_item-obj_name.
     mv_has_own_wb_data_class = has_own_wb_data_class( ).
 
     TRY.
-        IF mv_has_own_wb_data_class = abap_true.
-          CREATE DATA mr_dynamic_cache TYPE ('CL_DTDC_WB_OBJECT_DATA=>TY_DTDC_OBJECT_DATA').
-        ELSE.
-          CREATE DATA mr_dynamic_cache TYPE ('CL_BLUE_SOURCE_OBJECT_DATA=>TY_OBJECT_DATA').
-        ENDIF.
-        CREATE OBJECT mi_persistence TYPE ('CL_DTDC_OBJECT_PERSIST').
+
+        CREATE DATA mr_static_cache TYPE ('CL_BLUE_SOURCE_OBJECT_DATA=>TY_OBJECT_DATA').
+
+        CREATE OBJECT mi_persistence TYPE ('CL_DTSC_OBJECT_PERSIST').
 
       CATCH cx_sy_create_error.
         RAISE EXCEPTION TYPE zcx_abapgit_type_not_supported EXPORTING obj_type = is_item-obj_type.
@@ -167,42 +169,39 @@ CLASS zcl_abapgit_object_dtdc IMPLEMENTATION.
 
     DATA:
       li_wb_object_operator TYPE REF TO object,
-      lr_dynamic_cache_old  TYPE REF TO data.
+      lr_static_cache_old   TYPE REF TO data.
 
     FIELD-SYMBOLS:
-      <ls_dynamic_cache_old> TYPE any,
-      <lv_created_at>        TYPE xsddatetime_z,
-      <lv_created_by>        TYPE syuname,
-      <lv_created_at_old>    TYPE xsddatetime_z,
-      <lv_created_by_old>    TYPE syuname.
+      <ls_static_cache_old> TYPE any,
+      <lv_created_at>       TYPE xsddatetime_z,
+      <lv_created_by>       TYPE syuname,
+      <lv_created_at_old>   TYPE xsddatetime_z,
+      <lv_created_by_old>   TYPE syuname.
 
     li_wb_object_operator = get_wb_object_operator( ).
 
-    IF mv_has_own_wb_data_class = abap_true.
-      CREATE DATA lr_dynamic_cache_old TYPE ('CL_DTDC_WB_OBJECT_DATA=>TY_DTDC_OBJECT_DATA').
-    ELSE.
-      CREATE DATA lr_dynamic_cache_old TYPE ('CL_BLUE_SOURCE_OBJECT_DATA=>TY_OBJECT_DATA').
-    ENDIF.
-    ASSIGN lr_dynamic_cache_old->* TO <ls_dynamic_cache_old>.
+    CREATE DATA lr_static_cache_old TYPE ('CL_BLUE_SOURCE_OBJECT_DATA=>TY_OBJECT_DATA').
+
+    ASSIGN lr_static_cache_old->* TO <ls_static_cache_old>.
     ASSERT sy-subrc = 0.
 
     CALL METHOD li_wb_object_operator->('IF_WB_OBJECT_OPERATOR~READ')
       IMPORTING
-        data = <ls_dynamic_cache_old>.
+        data = <ls_static_cache_old>.
 
-    ASSIGN COMPONENT 'METADATA-CREATED_BY' OF STRUCTURE cs_dynamic_cache
+    ASSIGN COMPONENT 'METADATA-CREATED_BY' OF STRUCTURE cs_static_cache
            TO <lv_created_by>.
     ASSERT sy-subrc = 0.
 
-    ASSIGN COMPONENT 'METADATA-CREATED_AT' OF STRUCTURE cs_dynamic_cache
+    ASSIGN COMPONENT 'METADATA-CREATED_AT' OF STRUCTURE cs_static_cache
            TO <lv_created_at>.
     ASSERT sy-subrc = 0.
 
-    ASSIGN COMPONENT 'METADATA-CREATED_BY' OF STRUCTURE <ls_dynamic_cache_old>
+    ASSIGN COMPONENT 'METADATA-CREATED_BY' OF STRUCTURE <ls_static_cache_old>
            TO <lv_created_by_old>.
     ASSERT sy-subrc = 0.
 
-    ASSIGN COMPONENT 'METADATA-CREATED_AT' OF STRUCTURE <ls_dynamic_cache_old>
+    ASSIGN COMPONENT 'METADATA-CREATED_AT' OF STRUCTURE <ls_static_cache_old>
            TO <lv_created_at_old>.
     ASSERT sy-subrc = 0.
 
@@ -222,14 +221,14 @@ CLASS zcl_abapgit_object_dtdc IMPLEMENTATION.
       ri_wb_object_operator = mi_wb_object_operator.
     ENDIF.
 
-    ls_object_type-objtype_tr = 'DTDC'.
+    ls_object_type-objtype_tr = 'DTSC'.
     ls_object_type-subtype_wb = 'DF'.
 
     TRY.
         CALL METHOD ('CL_WB_OBJECT_OPERATOR')=>('CREATE_INSTANCE')
           EXPORTING
             object_type = ls_object_type
-            object_key  = mv_dynamic_cache_key
+            object_key  = mv_static_cache_key
           RECEIVING
             result      = mi_wb_object_operator.
 
@@ -244,16 +243,7 @@ CLASS zcl_abapgit_object_dtdc IMPLEMENTATION.
 
   METHOD has_own_wb_data_class.
 
-    DATA:
-      lr_own_type TYPE REF TO data,
-      lx_error    TYPE REF TO cx_root.
-
-    TRY.
-        CREATE DATA lr_own_type TYPE ('CL_DTDC_WB_OBJECT_DATA=>TY_DTDC_OBJECT_DATA').
-        rv_supported = abap_true.
-      CATCH cx_root INTO lx_error.
-        rv_supported = abap_false.
-    ENDTRY.
+    rv_supported = abap_false.
 
   ENDMETHOD.
 
@@ -310,40 +300,37 @@ CLASS zcl_abapgit_object_dtdc IMPLEMENTATION.
 
     FIELD-SYMBOLS:
       <lv_abap_language_version> TYPE uccheck,
-      <ls_dynamic_cache>         TYPE any,
+      <ls_static_cache>          TYPE any,
       <lv_source>                TYPE data.
 
-    ASSIGN mr_dynamic_cache->* TO <ls_dynamic_cache>.
+    ASSIGN mr_static_cache->* TO <ls_static_cache>.
     ASSERT sy-subrc = 0.
 
     io_xml->read(
       EXPORTING
-        iv_name = 'DTDC'
+        iv_name = 'DTSC'
       CHANGING
-        cg_data = <ls_dynamic_cache> ).
+        cg_data = <ls_static_cache> ).
 
     li_wb_object_operator = get_wb_object_operator( ).
 
     TRY.
-        IF mv_has_own_wb_data_class = abap_true.
-          CREATE OBJECT li_object_data_model TYPE ('CL_DTDC_WB_OBJECT_DATA').
-        ELSE.
-          CREATE OBJECT li_object_data_model TYPE ('CL_BLUE_SOURCE_OBJECT_DATA').
-        ENDIF.
 
-        ASSIGN COMPONENT 'CONTENT-SOURCE' OF STRUCTURE <ls_dynamic_cache>
+        CREATE OBJECT li_object_data_model TYPE ('CL_BLUE_SOURCE_OBJECT_DATA').
+
+        ASSIGN COMPONENT 'CONTENT-SOURCE' OF STRUCTURE <ls_static_cache>
                TO <lv_source>.
         ASSERT sy-subrc = 0.
 
-        <lv_source> = mo_files->read_string( 'asdtdc' ).
+        <lv_source> = mo_files->read_string( 'acds' ).
 
         tadir_insert( iv_package ).
 
         IF zif_abapgit_object~exists( ) = abap_true.
 
           " We need to populate created_at, created_by, because otherwise update  is not possible
-          fill_metadata_from_db( CHANGING cs_dynamic_cache = <ls_dynamic_cache> ).
-          li_object_data_model->set_data( <ls_dynamic_cache> ).
+          fill_metadata_from_db( CHANGING cs_static_cache = <ls_static_cache> ).
+          li_object_data_model->set_data( <ls_static_cache> ).
 
           CALL METHOD li_wb_object_operator->('IF_WB_OBJECT_OPERATOR~UPDATE')
             EXPORTING
@@ -352,7 +339,7 @@ CLASS zcl_abapgit_object_dtdc IMPLEMENTATION.
 
         ELSE.
 
-          li_object_data_model->set_data( <ls_dynamic_cache> ).
+          li_object_data_model->set_data( <ls_static_cache> ).
 
           CALL METHOD li_wb_object_operator->('IF_WB_OBJECT_OPERATOR~CREATE')
             EXPORTING
@@ -371,14 +358,14 @@ CLASS zcl_abapgit_object_dtdc IMPLEMENTATION.
 
         CALL METHOD li_wb_object_operator->('IF_WB_OBJECT_OPERATOR~ACTIVATE').
 
-        ASSIGN COMPONENT 'METADATA-ABAP_LANGUAGE_VERSION' OF STRUCTURE <ls_dynamic_cache>
+        ASSIGN COMPONENT 'METADATA-ABAP_LANGUAGE_VERSION' OF STRUCTURE <ls_static_cache>
           TO <lv_abap_language_version>.
         IF sy-subrc = 0.
           set_abap_language_version( CHANGING cv_abap_language_version = <lv_abap_language_version> ).
 
           TRY.
-              UPDATE ('DDDTDC_SOURCE') SET abap_language_version = <lv_abap_language_version>
-                WHERE dtdc_name = ms_item-obj_name.
+              UPDATE ('DDDTSC_SOURCE') SET abap_language_version = <lv_abap_language_version>
+                WHERE dtsc_name = ms_item-obj_name.
             CATCH cx_sy_dynamic_osql_semantics ##NO_HANDLER.
           ENDTRY.
         ENDIF.
@@ -396,7 +383,7 @@ CLASS zcl_abapgit_object_dtdc IMPLEMENTATION.
 
     TRY.
         mi_persistence->get(
-          p_object_key           = mv_dynamic_cache_key
+          p_object_key           = mv_static_cache_key
           p_version              = 'A'
           p_existence_check_only = abap_true ).
         rv_bool = abap_true.
@@ -404,19 +391,6 @@ CLASS zcl_abapgit_object_dtdc IMPLEMENTATION.
       CATCH cx_swb_exception.
         rv_bool = abap_false.
     ENDTRY.
-
-    IF rv_bool = abap_false.
-      TRY.
-          mi_persistence->get(
-            p_object_key           = mv_dynamic_cache_key
-            p_version              = 'I'
-            p_existence_check_only = abap_true ).
-          rv_bool = abap_true.
-
-        CATCH cx_swb_exception.
-          rv_bool = abap_false.
-      ENDTRY.
-    ENDIF.
 
   ENDMETHOD.
 
@@ -479,10 +453,10 @@ CLASS zcl_abapgit_object_dtdc IMPLEMENTATION.
 
     FIELD-SYMBOLS:
       <lv_abap_language_version> TYPE uccheck,
-      <ls_dynamic_cache>         TYPE any,
+      <ls_static_cache>          TYPE any,
       <lv_source>                TYPE string.
 
-    ASSIGN mr_dynamic_cache->* TO <ls_dynamic_cache>.
+    ASSIGN mr_static_cache->* TO <ls_static_cache>.
     ASSERT sy-subrc = 0.
 
     TRY.
@@ -492,32 +466,32 @@ CLASS zcl_abapgit_object_dtdc IMPLEMENTATION.
           EXPORTING
             version        = 'A'
           IMPORTING
-            data           = <ls_dynamic_cache>
+            data           = <ls_static_cache>
             eo_object_data = li_object_data_model.
 
-        ASSIGN COMPONENT 'CONTENT-SOURCE' OF STRUCTURE <ls_dynamic_cache>
+        ASSIGN COMPONENT 'CONTENT-SOURCE' OF STRUCTURE <ls_static_cache>
                TO <lv_source>.
         ASSERT sy-subrc = 0.
 
         lv_source = <lv_source>.
 
-        clear_fields( CHANGING cs_dynamic_cache = <ls_dynamic_cache> ).
+        clear_fields( CHANGING cs_static_cache = <ls_static_cache> ).
 
       CATCH cx_root INTO lx_error.
         zcx_abapgit_exception=>raise_with_text( lx_error ).
     ENDTRY.
 
-    ASSIGN COMPONENT 'METADATA-ABAP_LANGUAGE_VERSION' OF STRUCTURE <ls_dynamic_cache> TO <lv_abap_language_version>.
+    ASSIGN COMPONENT 'METADATA-ABAP_LANGUAGE_VERSION' OF STRUCTURE <ls_static_cache> TO <lv_abap_language_version>.
     IF sy-subrc = 0.
       <lv_abap_language_version> = get_abap_language_version( ).
     ENDIF.
 
     io_xml->add(
-      iv_name = 'DTDC'
-      ig_data = <ls_dynamic_cache> ).
+      iv_name = 'DTSC'
+      ig_data = <ls_static_cache> ).
 
     mo_files->add_string(
-      iv_ext    = 'asdtdc'
+      iv_ext    = 'acds'
       iv_string = lv_source ).
 
   ENDMETHOD.
